@@ -124,7 +124,7 @@ export const AuthProvider = ({ children }) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `JWT ${token}`,
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify({ query }),
     });

@@ -93,19 +93,22 @@ const AddProductCategory = () => {
     setCategoryError('');
 
     try {
+      console.log(categoryForm)
       const response = await fetch('http://127.0.0.1:8000/graphql/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
+        
+        
         body: JSON.stringify({
           query: `
             mutation {
-              createCategory(input: {
+              createCategory(
                 name: "${categoryForm.name}",
                 description: "${categoryForm.description}"
-              }) {
+              ) {
                 category {
                   id
                   name
@@ -152,14 +155,14 @@ const AddProductCategory = () => {
         body: JSON.stringify({
           query: `
             mutation {
-              createProduct(input: {
+              createProduct(
                 name: "${productForm.name}",
                 description: "${productForm.description}",
                 price: ${parseFloat(productForm.price)},
                 categoryId: ${parseInt(productForm.categoryId)},
                 inventoryQuantity: ${parseInt(productForm.inventoryQuantity) || 0},
                 isPublished: ${productForm.isPublished}
-              }) {
+              ) {
                 product {
                   id
                   name

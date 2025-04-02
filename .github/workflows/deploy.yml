@@ -1,0 +1,11 @@
+    - name: Install frontend dependencies
+      working-directory: ./frontend
+      run: npm install
+
+    - name: Lint frontend
+      working-directory: ./frontend
+      run: npm run lint
+
+    - name: Run frontend Vite build (optional)
+      working-directory: ./frontend
+      run: npm run build

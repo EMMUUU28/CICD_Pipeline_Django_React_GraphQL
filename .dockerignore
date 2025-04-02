@@ -1,0 +1,35 @@
+# Node + React junk
+**/node_modules
+**/dist
+**/.vite
+**/.next
+**/.cache
+
+# Python cache files
+**/__pycache__/
+**/*.py[cod]
+**/*.sqlite3
+
+# Virtualenv (if you're using one)
+env/
+venv/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Logs & temp
+*.log
+*.tmp
+
+# Editor folders
+.vscode/
+.idea/
+*.swp
+
+# Dependency lock files (optional — only if not needed in container)
+frontend/package-lock.json
+
+# Git stuff (not needed in image)
+.git
+.gitignore

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
 const AddProductCategory = () => {
-  const { authFetch } = useAuth();
   const [activeTab, setActiveTab] = useState('category');
   
   // Category form state

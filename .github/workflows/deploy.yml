@@ -61,8 +61,8 @@ jobs:
           cat << EOF > deploy.sh
           #!/bin/bash
           set -e
-          docker-compose -f docker-compose.yml down
-          docker-compose -f docker-compose.yml up -d
+          docker-compose -f docker/docker-compose.yml down
+          docker-compose -f docker/docker-compose.yml up -d
           docker image prune -f
           EOF
           chmod +x deploy.sh

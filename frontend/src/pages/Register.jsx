@@ -38,7 +38,7 @@ const Register = () => {
     }
 
     try {
-      const response = await fetch('/graphql/', {
+      const response = await fetch('http://127.0.0.1:8000/graphql/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -49,12 +49,8 @@ const Register = () => {
               createUser(
                 username: "${formData.username}",
                 email: "${formData.email}",
-                password: "${formData.password}",
-                firstName: "${formData.firstName}",
-                lastName: "${formData.lastName}"
+                password: "${formData.password}"
               ) {
-                success
-                message
                 user {
                   id
                   username
@@ -71,17 +67,16 @@ const Register = () => {
       if (data.errors) {
         throw new Error(data.errors[0].message || 'Registration failed');
       }
-
-      if (data.data.createUser.success) {
+      console.log(data);
+      
+      if (data.data.createUser) {
         setSuccess('Registration successful! Redirecting to login...');
         
         // Redirect to login after a short delay
         setTimeout(() => {
           navigate('/login');
         }, 2000);
-      } else {
-        throw new Error(data.data.createUser.message || 'Registration failed');
-      }
+      } 
     } catch (err) {
       setError(err.message || 'An error occurred during registration');
     } finally {

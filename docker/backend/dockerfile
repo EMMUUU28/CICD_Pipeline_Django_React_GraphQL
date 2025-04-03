@@ -8,6 +8,7 @@ RUN pip install -r requirements.txt
 
 COPY backend .
 
-RUN ls -l /app
+RUN chmod +x entrypoint.sh
 
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["./entrypoint.sh"]
+

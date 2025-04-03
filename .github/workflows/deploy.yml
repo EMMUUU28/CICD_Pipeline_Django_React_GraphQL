@@ -1,48 +1,103 @@
-name: Django + React CI/CD
+name: Deploy to EC2
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
+  
+
+env:
+  # Configure these with your specific details
+  AWS_REGION: us-east-1
+  EC2_INSTANCE_IP: ${{ secrets.EC2_INSTANCE_IP }}
+  EC2_SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+ 
+  # Database connection secrets
+  DB_HOST: ${{ secrets.DB_HOST }}
+  DB_USER: ${{ secrets.DB_USER }}
+  DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+  DB_NAME: ${{ secrets.DB_NAME }}
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
-
+   
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    # Checkout the repository
+    - name: Checkout code
+      uses: actions/checkout@v3
+   
+    # Setup Node.js (adjust version as needed)
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18.x'
+   
+    # Install dependencies
+    - name: Install dependencies
+      run: |
+        npm ci
+        npm run build
+   
+    # Configure AWS credentials
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+   
+    # Build Docker images
+    - name: Build Docker images
+      run: |
+        docker-compose -f docker-compose.yml build
+   
+    # Prepare deployment script
+    - name: Prepare deployment script
+      run: |
+        # Create deployment script
+        cat << EOF > deploy.sh
+        #!/bin/bash
+        set -e
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
+        # Pull latest images
+        docker-compose -f docker-compose.yml pull
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.11
+        # Stop existing containers
+        docker-compose -f docker-compose.yml down
 
-      - name: Install backend dependencies
-        working-directory: ./backend
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+        # Start new containers
+        docker-compose -f docker-compose.yml up -d
 
-      - name: Run Django migrations and tests
-        working-directory: ./backend
-        run: |
-          python manage.py migrate
-          python manage.py test
+        # Cleanup old images
+        docker image prune -f
+        EOF
 
-      - name: Install frontend dependencies
-        working-directory: ./frontend
-        run: npm install
+        chmod +x deploy.sh
+   
+    # Deploy to EC2 via SSH
+    - name: Deploy to EC2
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ env.EC2_INSTANCE_IP }}
+        username: ec2-user
+        key: ${{ env.EC2_SSH_PRIVATE_KEY }}
+        script: |
+          # Navigate to project directory
+          cd /path/to/your/project
 
-      - name: Lint frontend
-        working-directory: ./frontend
-        run: npm run lint
+          # Copy deployment files
+          scp -r ${{ github.workspace }}/docker-compose.yml ${{ github.workspace }}/deploy.sh ec2-user@${{ env.EC2_INSTANCE_IP }}:/path/to/your/project/
 
-      - name: Run frontend Vite build (optional)
-        working-directory: ./frontend
-        run: npm run build
+          # Execute deployment script
+          chmod +x deploy.sh
+          ./deploy.sh
+   
+    # Optional: Database migration step
+    - name: Run Database Migrations
+      run: |
+        # Add your database migration command here
+        # For example:
+        # npm run migrate
+      env:
+        DATABASE_URL: mysql://${{ secrets.DB_USER }}:${{ secrets.DB_PASSWORD }}@${{ secrets.DB_HOST }}/${{ secrets.DB_NAME }}??ssl-mode=REQUIRED
+   

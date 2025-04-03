@@ -4,7 +4,6 @@ on:
   push:
     branches: [ "main" ]
   
-
 env:
   # Configure these with your specific details
   AWS_REGION: us-east-1
@@ -35,7 +34,7 @@ jobs:
     # Install dependencies
     - name: Install dependencies
       run: |
-        npm ci
+        npm i
         npm run build
    
     # Configure AWS credentials
@@ -49,7 +48,7 @@ jobs:
     # Build Docker images
     - name: Build Docker images
       run: |
-        docker-compose -f docker-compose.yml build
+        docker-compose -f docker/docker-compose.yml build
    
     # Prepare deployment script
     - name: Prepare deployment script
@@ -60,13 +59,13 @@ jobs:
         set -e
 
         # Pull latest images
-        docker-compose -f docker-compose.yml pull
+        docker-compose -f docker/docker-compose.yml pull
 
         # Stop existing containers
-        docker-compose -f docker-compose.yml down
+        docker-compose -f docker/docker-compose.yml down
 
         # Start new containers
-        docker-compose -f docker-compose.yml up -d
+        docker-compose -f docker/docker-compose.yml up -d
 
         # Cleanup old images
         docker image prune -f
@@ -82,11 +81,9 @@ jobs:
         username: ec2-user
         key: ${{ env.EC2_SSH_PRIVATE_KEY }}
         script: |
-          # Navigate to project directory
-          cd /path/to/your/project
-
-          # Copy deployment files
-          scp -r ${{ github.workspace }}/docker-compose.yml ${{ github.workspace }}/deploy.sh ec2-user@${{ env.EC2_INSTANCE_IP }}:/path/to/your/project/
+          
+          # Copy deployment files\
+          scp -r ${{ github.workspace }}/docker/docker-compose.yml ${{ github.workspace }}/deploy.sh ec2-user@${{ env.EC2_INSTANCE_IP }}:/
 
           # Execute deployment script
           chmod +x deploy.sh
@@ -96,8 +93,7 @@ jobs:
     - name: Run Database Migrations
       run: |
         # Add your database migration command here
-        # For example:
-        # npm run migrate
+        
       env:
         DATABASE_URL: mysql://${{ secrets.DB_USER }}:${{ secrets.DB_PASSWORD }}@${{ secrets.DB_HOST }}/${{ secrets.DB_NAME }}??ssl-mode=REQUIRED
    

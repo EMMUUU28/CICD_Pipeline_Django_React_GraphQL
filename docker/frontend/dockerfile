@@ -4,11 +4,13 @@ WORKDIR /app
 
 ENV ROLLUP_SKIP_NODEJS_OPTIONAL=1
 
-COPY frontend/package*.json ./
+# Since the context is ../frontend, don't include "frontend/" in the path
+COPY package*.json ./
 
 RUN npm install
 
-COPY frontend .
+# Don't include "frontend" here either
+COPY . .
 
 EXPOSE 5173
 

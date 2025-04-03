@@ -85,6 +85,14 @@ jobs:
           username: ec2-user
           key: ${{ env.EC2_SSH_PRIVATE_KEY }}
           script: |
+            # Install Docker Compose if not already installed
+            if ! [ -x "$(command -v docker-compose)" ]; then
+              echo "Docker Compose not found, installing now..."
+              sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" \
+                -o /usr/local/bin/docker-compose
+              sudo chmod +x /usr/local/bin/docker-compose
+            fi
+
             cd /home/ec2-user
             chmod +x deploy.sh
             ./deploy.sh

@@ -70,8 +70,7 @@ jobs:
       - name: Create deployment docker-compose file
         run: |
           cat << EOF > ec2-docker-compose.yml
-          version: '3'
-          
+        
           services:
             backend:
               image: ${{ secrets.DOCKER_USERNAME }}/graphql-dashboard-backend:latest

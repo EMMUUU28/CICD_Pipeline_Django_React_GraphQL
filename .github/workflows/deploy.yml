@@ -12,6 +12,9 @@ env:
   DB_USER: ${{ secrets.DB_USER }}
   DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
   DB_NAME: ${{ secrets.DB_NAME }}
+  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+  DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+  IMAGE_TAG: ${{ github.sha }}
 
 jobs:
   deploy:
@@ -35,7 +38,7 @@ jobs:
           npm install
           npm run build
 
-      # Configure AWS credentials (if needed)
+      # Configure AWS credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -43,17 +46,77 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # Install Docker Compose
-      - name: Install Docker Compose
-        run: |
-          sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" \
-            -o /usr/local/bin/docker-compose
-          sudo chmod +x /usr/local/bin/docker-compose
+      # Login to Docker Hub
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ env.DOCKER_USERNAME }}
+          password: ${{ env.DOCKER_PASSWORD }}
 
-      # Build Docker images (docker-compose.yml inside docker folder)
-      - name: Build Docker images
+      # Build and push Docker images
+      - name: Build and push Docker images
         run: |
-          docker-compose -f docker/docker-compose.yml build
+          # Create a temporary docker-compose.yml file with image names
+          cat << EOF > docker/docker-compose.prod.yml
+          services:
+            backend:
+              image: ${{ env.DOCKER_USERNAME }}/graphql-dashboard-backend:${{ env.IMAGE_TAG }}
+              build:
+                context: ../backend
+                dockerfile: ../docker/backend/dockerfile
+              ports:
+                - "8000:8000"
+              environment:
+                - DB_HOST=${{ env.DB_HOST }}
+                - DB_USER=${{ env.DB_USER }}
+                - DB_PASSWORD=${{ env.DB_PASSWORD }}
+                - DB_NAME=${{ env.DB_NAME }}
+              command: gunicorn backend.wsgi:application --bind 0.0.0.0:8000
+            
+            frontend:
+              image: ${{ env.DOCKER_USERNAME }}/graphql-dashboard-frontend:${{ env.IMAGE_TAG }}
+              build:
+                context: ../frontend
+                dockerfile: ../docker/frontend/dockerfile
+              ports:
+                - "5173:5173"
+              command: npm run preview -- --host
+          EOF
+          
+          # Build and push images
+          docker-compose -f docker/docker-compose.prod.yml build
+          docker-compose -f docker/docker-compose.prod.yml push
+          
+          # Tag and push as latest for convenience
+          docker tag ${{ env.DOCKER_USERNAME }}/graphql-dashboard-backend:${{ env.IMAGE_TAG }} ${{ env.DOCKER_USERNAME }}/graphql-dashboard-backend:latest
+          docker tag ${{ env.DOCKER_USERNAME }}/graphql-dashboard-frontend:${{ env.IMAGE_TAG }} ${{ env.DOCKER_USERNAME }}/graphql-dashboard-frontend:latest
+          docker push ${{ env.DOCKER_USERNAME }}/graphql-dashboard-backend:latest
+          docker push ${{ env.DOCKER_USERNAME }}/graphql-dashboard-frontend:latest
+
+      # Create a deployment docker-compose file for EC2
+      - name: Create deployment docker-compose file
+        run: |
+          cat << EOF > ec2-docker-compose.yml
+          version: '3'
+          
+          services:
+            backend:
+              image: ${{ env.DOCKER_USERNAME }}/graphql-dashboard-backend:latest
+              ports:
+                - "8000:8000"
+              environment:
+                - DB_HOST=${{ env.DB_HOST }}
+                - DB_USER=${{ env.DB_USER }}
+                - DB_PASSWORD=${{ env.DB_PASSWORD }}
+                - DB_NAME=${{ env.DB_NAME }}
+              restart: always
+            
+            frontend:
+              image: ${{ env.DOCKER_USERNAME }}/graphql-dashboard-frontend:latest
+              ports:
+                - "5173:5173"
+              restart: always
+          EOF
 
       # Prepare deployment script
       - name: Prepare deployment script
@@ -61,8 +124,17 @@ jobs:
           cat << EOF > deploy.sh
           #!/bin/bash
           set -e
-          docker-compose -f docker/docker-compose.yml down
-          docker-compose -f docker/docker-compose.yml up -d
+          
+          # Pull latest images
+          docker-compose -f ec2-docker-compose.yml pull
+          
+          # Stop and remove existing containers
+          docker-compose -f ec2-docker-compose.yml down
+          
+          # Start new containers
+          docker-compose -f ec2-docker-compose.yml up -d
+          
+          # Clean up unused images
           docker image prune -f
           EOF
           chmod +x deploy.sh
@@ -74,7 +146,7 @@ jobs:
           host: ${{ env.EC2_INSTANCE_IP }}
           username: ec2-user
           key: ${{ env.EC2_SSH_PRIVATE_KEY }}
-          source: "docker/docker-compose.yml,deploy.sh"
+          source: "ec2-docker-compose.yml,deploy.sh"
           target: "/home/ec2-user/"
 
       # Deploy on EC2 via SSH
@@ -105,10 +177,12 @@ jobs:
               sudo chmod +x /usr/local/bin/docker-compose
             fi
 
+            # Login to Docker Hub to pull private images if needed
+            echo "${{ env.DOCKER_PASSWORD }}" | docker login -u "${{ env.DOCKER_USERNAME }}" --password-stdin
+            
             cd /home/ec2-user
             chmod +x deploy.sh
             ./deploy.sh
-
 
       # Run Django migrations on EC2 (assuming container named 'backend')
       - name: Run Database Migrations on EC2

@@ -34,6 +34,7 @@ jobs:
     # Install dependencies
     - name: Install dependencies
       run: |
+        cd frontend/
         npm i
         npm run build
    
@@ -92,8 +93,10 @@ jobs:
     # Optional: Database migration step
     - name: Run Database Migrations
       run: |
-        # Add your database migration command here
-        
+        cd backend/
+        python manage.py makemigrations
+        python manage.py migrate
+      
       env:
         DATABASE_URL: mysql://${{ secrets.DB_USER }}:${{ secrets.DB_PASSWORD }}@${{ secrets.DB_HOST }}/${{ secrets.DB_NAME }}??ssl-mode=REQUIRED
    

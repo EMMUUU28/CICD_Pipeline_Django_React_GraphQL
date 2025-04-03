@@ -2,15 +2,12 @@ name: Deploy to EC2
 
 on:
   push:
-    branches: [ "main" ]
-  
+    branches: ["main"]
+
 env:
-  # Configure these with your specific details
   AWS_REGION: us-east-1
   EC2_INSTANCE_IP: ${{ secrets.EC2_INSTANCE_IP }}
   EC2_SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
- 
-  # Database connection secrets
   DB_HOST: ${{ secrets.DB_HOST }}
   DB_USER: ${{ secrets.DB_USER }}
   DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
@@ -19,84 +16,86 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-   
+
     steps:
-    # Checkout the repository
+    # Checkout repository
     - name: Checkout code
       uses: actions/checkout@v3
-   
-    # Setup Node.js (adjust version as needed)
+
+    # Setup Node.js
     - name: Setup Node.js
       uses: actions/setup-node@v3
       with:
         node-version: '18.x'
-   
-    # Install dependencies
-    - name: Install dependencies
+
+    # Install frontend dependencies and build
+    - name: Install frontend dependencies
       run: |
         cd frontend/
-        npm i
+        npm install
         npm run build
-   
-    # Configure AWS credentials
+
+    # Configure AWS credentials (if needed)
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v1
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
-   
+
+    # Install Docker Compose
+    - name: Install Docker Compose
+      run: |
+        sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" \
+          -o /usr/local/bin/docker-compose
+        sudo chmod +x /usr/local/bin/docker-compose
+
     # Build Docker images
     - name: Build Docker images
       run: |
         docker-compose -f docker-compose.yml build
-   
+
     # Prepare deployment script
     - name: Prepare deployment script
       run: |
-        # Create deployment script
         cat << EOF > deploy.sh
         #!/bin/bash
         set -e
-
-        # Pull latest images
-        docker-compose -f docker-compose.yml pull
-
-        # Stop existing containers
         docker-compose -f docker-compose.yml down
-
-        # Start new containers
         docker-compose -f docker-compose.yml up -d
-
-        # Cleanup old images
         docker image prune -f
         EOF
-
         chmod +x deploy.sh
-   
-    # Deploy to EC2 via SSH
-    - name: Deploy to EC2
+
+    # Transfer docker-compose.yml and deploy.sh using SCP action
+    - name: Copy files to EC2
+      uses: appleboy/scp-action@master
+      with:
+        host: ${{ env.EC2_INSTANCE_IP }}
+        username: ec2-user
+        key: ${{ env.EC2_SSH_PRIVATE_KEY }}
+        source: "docker-compose.yml,deploy.sh"
+        target: "/home/ec2-user/"
+
+    # Deploy on EC2 via SSH
+    - name: Execute deployment script on EC2
       uses: appleboy/ssh-action@master
       with:
         host: ${{ env.EC2_INSTANCE_IP }}
         username: ec2-user
         key: ${{ env.EC2_SSH_PRIVATE_KEY }}
         script: |
-          
-          # Copy deployment files\
-          scp -r ${{ github.workspace }}/docker-compose.yml ${{ github.workspace }}/deploy.sh ec2-user@${{ env.EC2_INSTANCE_IP }}:/
-
-          # Execute deployment script
+          cd /home/ec2-user
           chmod +x deploy.sh
           ./deploy.sh
-   
-    # Optional: Database migration step
-    - name: Run Database Migrations
-      run: |
-        cd backend/
-        python manage.py makemigrations
-        python manage.py migrate
-      
-      env:
-        DATABASE_URL: mysql://${{ secrets.DB_USER }}:${{ secrets.DB_PASSWORD }}@${{ secrets.DB_HOST }}/${{ secrets.DB_NAME }}??ssl-mode=REQUIRED
-   
+
+    # Run Django database migrations inside Docker container via SSH on EC2
+    - name: Run Database Migrations on EC2
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ env.EC2_INSTANCE_IP }}
+        username: ec2-user
+        key: ${{ env.EC2_SSH_PRIVATE_KEY }}
+        script: |
+          docker exec -i $(docker ps -qf "name=backend") python manage.py makemigrations
+          docker exec -i $(docker ps -qf "name=backend") python manage.py migrate

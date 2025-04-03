@@ -60,13 +60,13 @@ jobs:
         set -e
 
         # Pull latest images
-        docker-compose -f docker/docker-compose.yml pull
+        docker-compose -f docker-compose.yml pull
 
         # Stop existing containers
-        docker-compose -f docker/docker-compose.yml down
+        docker-compose -f docker-compose.yml down
 
         # Start new containers
-        docker-compose -f docker/docker-compose.yml up -d
+        docker-compose -f docker-compose.yml up -d
 
         # Cleanup old images
         docker image prune -f
@@ -84,7 +84,7 @@ jobs:
         script: |
           
           # Copy deployment files\
-          scp -r ${{ github.workspace }}/docker/docker-compose.yml ${{ github.workspace }}/deploy.sh ec2-user@${{ env.EC2_INSTANCE_IP }}:/
+          scp -r ${{ github.workspace }}/docker-compose.yml ${{ github.workspace }}/deploy.sh ec2-user@${{ env.EC2_INSTANCE_IP }}:/
 
           # Execute deployment script
           chmod +x deploy.sh

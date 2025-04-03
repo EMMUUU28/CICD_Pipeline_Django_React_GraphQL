@@ -156,13 +156,4 @@ jobs:
             chmod +x deploy.sh
             ./deploy.sh
 
-      # Run Django migrations on EC2 (assuming container named 'backend')
-      - name: Run Database Migrations on EC2
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ env.EC2_INSTANCE_IP }}
-          username: ec2-user
-          key: ${{ env.EC2_SSH_PRIVATE_KEY }}
-          script: |
-            docker exec -i $(docker ps -qf "name=backend") python manage.py makemigrations
-            docker exec -i $(docker ps -qf "name=backend") python manage.py migrate
+     

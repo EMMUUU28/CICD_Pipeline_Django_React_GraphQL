@@ -1,16 +1,16 @@
 services:
   backend:
     build:
-      context: ..
-      dockerfile: docker/backend/dockerfile
+      context: ../docker/backend
+      dockerfile: dockerfile
     ports:
       - "8000:8000"
-    command: gunicorn your_project_name.wsgi:application --bind 0.0.0.0:8000
+    command: gunicorn backend.wsgi:application --bind 0.0.0.0:8000
 
   frontend:
     build:
-      context: ..
-      dockerfile: docker/frontend/dockerfile
+      context: ../docker/frontend
+      dockerfile: /dockerfile
     ports:
       - "5173:5173"
     command: npm run preview -- --host

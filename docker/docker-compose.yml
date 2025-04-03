@@ -5,7 +5,9 @@ services:
       dockerfile: ../docker/backend/dockerfile
     ports:
       - "8000:8000"
-    command: gunicorn backend.wsgi:application --bind 0.0.0.0:8000
+    volumns:
+       - ../docker/backend/entrypoint.sh:/app/entrypoint.sh
+    command: sh -c "chmod +x /app/entrypoint.sh && /app/entrypoint.sh"
 
   frontend:
     build:

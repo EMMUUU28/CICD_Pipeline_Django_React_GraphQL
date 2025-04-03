@@ -14,7 +14,6 @@ env:
   DB_NAME: ${{ secrets.DB_NAME }}
   DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
   DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-  IMAGE_TAG: ${{ github.sha }}
 
 jobs:
   deploy:
@@ -38,67 +37,34 @@ jobs:
           npm install
           npm run build
 
-      # Configure AWS credentials
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      # Install Docker Compose - MOVED UP before it's used
+      # Install Docker Compose
       - name: Install Docker Compose
         run: |
           sudo apt-get update
           sudo apt-get install -y docker-compose
           docker-compose --version
 
-      # Login to Docker Hub
+      # Docker login step
       - name: Login to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ env.DOCKER_USERNAME }}
-          password: ${{ env.DOCKER_PASSWORD }}
+        run: |
+          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+          echo "Docker login successful"
 
-      # Build and push Docker images
+      # Build and push images using individual Docker commands
       - name: Build and push Docker images
         run: |
-          # Create a temporary docker-compose.yml file with image names
-          cat << EOF > docker/docker-compose.prod.yml
-          services:
-            backend:
-              image: ${{ env.DOCKER_USERNAME }}/graphql-dashboard-backend:${{ env.IMAGE_TAG }}
-              build:
-                context: ../backend
-                dockerfile: ../docker/backend/dockerfile
-              ports:
-                - "8000:8000"
-              environment:
-                - DB_HOST=${{ env.DB_HOST }}
-                - DB_USER=${{ env.DB_USER }}
-                - DB_PASSWORD=${{ env.DB_PASSWORD }}
-                - DB_NAME=${{ env.DB_NAME }}
-              command: gunicorn backend.wsgi:application --bind 0.0.0.0:8000
-            
-            frontend:
-              image: ${{ env.DOCKER_USERNAME }}/graphql-dashboard-frontend:${{ env.IMAGE_TAG }}
-              build:
-                context: ../frontend
-                dockerfile: ../docker/frontend/dockerfile
-              ports:
-                - "5173:5173"
-              command: npm run preview -- --host
-          EOF
+          # Build backend with latest tag
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/graphql-dashboard-backend:latest -f docker/backend/dockerfile backend/
           
-          # Build and push images
-          docker-compose -f docker/docker-compose.prod.yml build
-          docker-compose -f docker/docker-compose.prod.yml push
+          # Build frontend with latest tag
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/graphql-dashboard-frontend:latest -f docker/frontend/dockerfile frontend/
           
-          # Tag and push as latest for convenience
-          docker tag ${{ env.DOCKER_USERNAME }}/graphql-dashboard-backend:${{ env.IMAGE_TAG }} ${{ env.DOCKER_USERNAME }}/graphql-dashboard-backend:latest
-          docker tag ${{ env.DOCKER_USERNAME }}/graphql-dashboard-frontend:${{ env.IMAGE_TAG }} ${{ env.DOCKER_USERNAME }}/graphql-dashboard-frontend:latest
-          docker push ${{ env.DOCKER_USERNAME }}/graphql-dashboard-backend:latest
-          docker push ${{ env.DOCKER_USERNAME }}/graphql-dashboard-frontend:latest
+          # Test access to Docker Hub
+          docker info
+          
+          # Push all images to Docker Hub
+          docker push ${{ secrets.DOCKER_USERNAME }}/graphql-dashboard-backend:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/graphql-dashboard-frontend:latest
 
       # Create a deployment docker-compose file for EC2
       - name: Create deployment docker-compose file
@@ -108,7 +74,7 @@ jobs:
           
           services:
             backend:
-              image: ${{ env.DOCKER_USERNAME }}/graphql-dashboard-backend:latest
+              image: ${{ secrets.DOCKER_USERNAME }}/graphql-dashboard-backend:latest
               ports:
                 - "8000:8000"
               environment:
@@ -119,7 +85,7 @@ jobs:
               restart: always
             
             frontend:
-              image: ${{ env.DOCKER_USERNAME }}/graphql-dashboard-frontend:latest
+              image: ${{ secrets.DOCKER_USERNAME }}/graphql-dashboard-frontend:latest
               ports:
                 - "5173:5173"
               restart: always

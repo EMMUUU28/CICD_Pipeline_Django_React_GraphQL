@@ -131,26 +131,9 @@ jobs:
           username: ec2-user
           key: ${{ env.EC2_SSH_PRIVATE_KEY }}
           script: |
-            # Install Docker if not present
-            if ! [ -x "$(command -v docker)" ]; then
-              echo "Docker not found, installing Docker..."
-              sudo yum update -y
-              sudo yum install -y docker
-              sudo service docker start
-              sudo usermod -aG docker ec2-user
-              sudo chmod 666 /var/run/docker.sock
-            else
-              sudo service docker start
-            fi
-
-            # Install Docker Compose if not present
-            if ! [ -x "$(command -v docker-compose)" ]; then
-              echo "Docker Compose not found, installing now..."
-              sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" \
-                -o /usr/local/bin/docker-compose
-              sudo chmod +x /usr/local/bin/docker-compose
-            fi
-
+           
+            sudo service docker start
+            
             # Login to Docker Hub to pull private images if needed
             echo "${{ env.DOCKER_PASSWORD }}" | docker login -u "${{ env.DOCKER_USERNAME }}" --password-stdin
             

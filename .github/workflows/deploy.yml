@@ -155,5 +155,13 @@ jobs:
             cd /home/ec2-user
             chmod +x deploy.sh
             ./deploy.sh
+            
+            # Wait for containers to fully start
+            echo "Waiting for containers to start..."
+            sleep 5
+            
+            # Run migrations
+            echo "Running database migrations..."
+            docker exec -i ec2-user-backend-1 python manage.py migrate
 
-     
+          

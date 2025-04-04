@@ -25,7 +25,7 @@ const Login = () => {
     try {
       console.log("Submitting form with:", formData);
       
-      const response = await fetch(process.env.REACT_APP_GRAPHQL_API, {
+      const response = await fetch(import.meta.env.VITE_GRAPHQL_API, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

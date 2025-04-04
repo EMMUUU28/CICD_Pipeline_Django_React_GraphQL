@@ -68,7 +68,7 @@ export const AuthProvider = ({ children }) => {
     }
     
     try {
-      const response = await fetch(process.env.REACT_APP_GRAPHQL_API, {
+      const response = await fetch(import.meta.env.VITE_GRAPHQL_API, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -120,7 +120,7 @@ export const AuthProvider = ({ children }) => {
       token = localStorage.getItem('token');
     }
     
-    const response = await fetch(process.env.REACT_APP_GRAPHQL_API, {
+    const response = await fetch(import.meta.env.VITE_GRAPHQL_API, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -135,7 +135,7 @@ export const AuthProvider = ({ children }) => {
   // Login function
   const login = async (username, password) => {
     try {
-      const response = await fetch(process.env.REACT_APP_GRAPHQL_API, {
+      const response = await fetch(import.meta.env.VITE_GRAPHQL_API, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

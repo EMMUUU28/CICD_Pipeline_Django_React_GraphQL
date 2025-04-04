@@ -25,7 +25,9 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))
 SECRET_KEY = 'django-insecure-w5%)&#wqd37uuxod!hexakv4$vd#^u4qt(bu$%n*wga4y0!#62'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# DEBUG = True
+
+DEBUG = False
 
 ALLOWED_HOSTS = ["*"]
 
@@ -172,4 +174,19 @@ CORS_ALLOW_ALL_ORIGINS = False  # Don't use this in production
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # Your frontend development server
     "http://127.0.0.1:5173",
+    "http://34.204.68.197:5173",
+]
+
+
+import os
+
+# URL prefix for static files
+STATIC_URL = '/static/'
+
+# The absolute path to the directory where collectstatic will collect static files
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# Additional locations of static files (optional)
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),
 ]

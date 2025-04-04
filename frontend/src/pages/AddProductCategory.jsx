@@ -34,7 +34,7 @@ const AddProductCategory = () => {
   // Fetch all categories
   const fetchCategories = async () => {
     try {
-      const response = await fetch('http://127.0.0.1:8000/graphql/', {
+      const response = await fetch(process.env.REACT_APP_GRAPHQL_API, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -92,7 +92,7 @@ const AddProductCategory = () => {
 
     try {
       console.log(categoryForm)
-      const response = await fetch('http://127.0.0.1:8000/graphql/', {
+      const response = await fetch(process.env.REACT_APP_GRAPHQL_API, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -144,7 +144,7 @@ const AddProductCategory = () => {
     setProductError('');
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/graphql/', {
+      const response = await fetch('http://127.0.0.1:8000/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
